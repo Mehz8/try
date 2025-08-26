@@ -1,0 +1,24 @@
+{
+  "name": "zipcode-webpage",
+  "version": "1.0.0",
+  "description": "A simple webpage for searching and displaying zip code information.",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "live-server public",
+    "build": "echo 'Build step not defined'",
+    "test": "echo 'No tests defined'"
+  },
+  "dependencies": {
+    "live-server": "^1.2.1"
+  },
+  "devDependencies": {
+    "parcel": "^2.15.4"
+  },
+  "keywords": [
+    "zip code",
+    "webpage",
+    "search"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
