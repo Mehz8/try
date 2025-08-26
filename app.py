@@ -3,6 +3,8 @@ import csv
 import os
 import re
 import pandas as pd
+from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
+import torch
 
 # Page configuration
 st.set_page_config(
@@ -20,7 +22,47 @@ if not os.path.exists(DB_FILE):
         writer = csv.writer(f)
         writer.writerow(["Type", "Detail", "Description"])
 
-# Lightweight AI simulation
+# Load AI model (with caching to avoid reloading on every interaction)
+@st.cache_resource
+def load_fraud_model():
+    try:
+        # Using a distilled model that's smaller and faster
+        model_name = "mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis"
+        classifier = pipeline("text-classification", 
+                             model=model_name,
+                             tokenizer=model_name)
+        return classifier
+    except Exception as e:
+        st.sidebar.warning(f"AI model could not be loaded: {str(e)}")
+        return None
+
+# AI-powered fraud analysis using Transformers
+def ai_transformers_analysis(text):
+    """
+    Analyze text using Hugging Face Transformers model
+    """
+    try:
+        classifier = load_fraud_model()
+        if classifier is None:
+            return "AI model not available. Using basic analysis.", []
+        
+        # Perform classification
+        result = classifier(text)
+        label = result[0]['label']
+        score = result[0]['score']
+        
+        # Map model outputs to fraud risk levels
+        if label == "negative":
+            return f"RED - High Fraud Risk ❌ (confidence: {score:.2%})", []
+        elif label == "neutral":
+            return f"YELLOW - Moderate Risk ⚠️ (confidence: {score:.2%})", []
+        else:
+            return f"GREEN - Low Risk ✅ (confidence: {score:.2%})", []
+            
+    except Exception as e:
+        return f"Analysis error: {str(e)}", []
+
+# Lightweight AI simulation (fallback)
 def lightweight_ai_analysis(text):
     """
     A simplified AI-like analysis using pattern matching and heuristics
@@ -115,6 +157,13 @@ def analyze_offer(text):
 def main():
     st.title("FraudShield - Digital Safe for Your Funds 🛡️")
     
+    # Display model status in sidebar
+    model = load_fraud_model()
+    if model:
+        st.sidebar.success("🤖 AI Model Loaded Successfully")
+    else:
+        st.sidebar.warning("⚠️ Using Lightweight Analysis (AI model not available)")
+    
     # Navigation
     menu = ["Search", "Report", "Offer Analyzer"]
     choice = st.sidebar.selectbox("Navigation", menu)
@@ -172,13 +221,29 @@ def main():
     elif choice == "Offer Analyzer":
         st.header("Offer Analyzer")
         
-        analysis_type = st.radio("Analysis Type", ["Basic Analysis", "AI Analysis"])
+        analysis_options = ["Basic Analysis", "AI Analysis"]
+        if model:
+            analysis_options.append("Transformers AI Analysis")
+        
+        analysis_type = st.radio("Analysis Type", analysis_options)
         
         offer = st.text_area("Enter offer text (e.g., Invest 10 lakhs, 10% monthly return)", height=100)
         
         if st.button("Analyze Offer"):
             if offer:
-                if analysis_type == "AI Analysis":
+                if analysis_type == "Transformers AI Analysis" and model:
+                    with st.spinner("🤖 AI is analyzing the offer..."):
+                        result, indicators = ai_transformers_analysis(offer)
+                    st.subheader("Analysis Result")
+                    
+                    if "RED" in result:
+                        st.error(result)
+                    elif "YELLOW" in result:
+                        st.warning(result)
+                    else:
+                        st.success(result)
+                    
+                elif analysis_type == "AI Analysis":
                     result, indicators = lightweight_ai_analysis(offer)
                     st.subheader("Analysis Result")
                     

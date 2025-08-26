@@ -1,4 +1,6 @@
-transformers
-flask
-streamlit 
+streamlit
 pandas
+transformers
+torch
+sentencepiece
+protobuf
